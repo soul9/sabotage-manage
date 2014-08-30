@@ -1,0 +1,113 @@
+#!/bin/sh
+
+do_xcompile() {
+  if [ "${host_arch}" = "${target_arch}" ]; then
+    return 1
+  fi
+}
+
+build_for() {
+  local r="${1:-}"
+  local pkg="${2:-}"
+  local ret=0
+  case "${r}" in
+    "target")
+      [ -z "${pkg}" ] && pkg="${extra_target_pkgs}"
+      ;;
+    "host")
+      [ -z "${pkg}" ] && pkg="${extra_host_pkgs}"
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+  cp "$(findproject ${project})"/sabotage-config."${r}" build/"${project}"/src/sabotage/"${r}"/config
+
+  cd build/"${project}"/src/sabotage/"${r}"/ 
+  sed -i "s,export SABOTAGE_BUILDDIR\=.*,export SABOTAGE_BUILDDIR='${manage_root}/build/${project}/$r/r'," config
+  mount --bind "${manage_root}"/tarballs "${manage_root}"/build/"${project}"/src/sabotage/$r/tarballs
+  if [ ! -d "${manage_root}/build/${project}/$r/r/etc" ]; then
+    #fIXME: this fucks up the root if run twice
+    ./build-stage 0
+  fi
+  utils/update-chroot
+  (
+    set_options
+    echo 'butch install stage1'
+    echo 'butch update'
+    [ -z "${pkg}" ] || \
+        echo "butch install ${pkg}"
+  ) |./enter-chroot || ret=1
+  cd "${manage_root}"
+  umount "${manage_root}"/build/"${project}"/src/sabotage/$r/tarballs
+  return $ret
+}
+
+build_musl() {
+  sed "s,CC_BASE_PREFIX=.*$,CC_BASE_PREFIX=/opt/musl-cross/prefix/\$TRIPLE-\$GCC_VERSION,g" "$(findproject ${project})"/musl-cross-config > build/"${project}"/host/r/opt/musl-cross/config.sh
+  cd build/"${project}"/src/sabotage/host/
+  (
+    set_options
+    echo "cd /opt/musl-cross"
+    echo "ARCH=${target_arch} ./build.sh"
+  ) |./enter-chroot
+  cd "${manage_root}"
+}
+
+mount_cross() {
+  mount --bind build/"${project}"/src/sabotage/target/ "${manage_root}/build/${project}/host/r/mnt/sabotage-cross/src"
+  mount --bind "${manage_root}"/build/"${project}"/target "${manage_root}"/build/"${project}"/host/r/mnt/sabotage-cross/target/
+  mount --bind "${manage_root}"/tarballs "${manage_root}"/build/"${project}"/src/sabotage/target/tarballs
+}
+
+unmount_cross() {
+  umount "${manage_root}/build/${project}/host/r/mnt/sabotage-cross/src" || return 1
+  umount "${manage_root}/build/${project}/host/r/mnt/sabotage-cross/target/" || return 1
+  umount "${manage_root}"/build/"${project}"/src/sabotage/target/tarballs || return 1
+}
+
+build_cross() {
+  if ! do_xcompile; then
+    return 0
+  fi
+  local pkg="${1:-}"
+  local ret=0
+  [ -z "${pkg}" ] && pkg="$extra_target_pkgs"
+  build_musl
+  cp "$(findproject ${project})"/sabotage-config.target build/"${project}"/src/sabotage/target/config
+  sed -i "s,export R\=.*,export R='/mnt/sabotage-cross/target/r'," build/"${project}"/src/sabotage/target/config
+  sed -i "s,crosstoolchain\=.*,crosstoolchain=/opt/musl-cross/prefix/arm-linux-musleabihf-4.8.3/," build/"${project}"/src/sabotage/target/config
+  mkdir -p "${manage_root}/build/${project}/host/r/mnt/sabotage-cross/src" \
+           "${manage_root}/build/${project}/target" \
+           "${manage_root}/build/${project}/host/r/mnt/sabotage-cross/target/"
+  mount_cross
+  cd build/"${project}"/src/sabotage/host/
+  (
+    set_options
+    echo "cd /mnt/sabotage-cross/src"
+    echo "A=${target_arch} CONFIG=config utils/setup-rootfs"
+    echo "utils/update-chroot"
+    echo "A=${target_arch} CONFIG=config butch install stage1"
+    echo "A=${target_arch} CONFIG=config butch update"
+    echo "A=${target_arch} CONFIG=config butch install $pkg"
+  ) |./enter-chroot || ret=1
+  cd "${manage_root}"
+  for i in $(seq 5); do
+    if unmount_cross; then
+      break
+    else
+      echo "Can not umount, retrying"
+    fi
+    sleep 1
+  done
+  return $ret
+}
+
+build_target() {
+  if do_xcompile; then
+    build_cross "$@"
+  else
+    build_for target "$@" || return 1
+    return 0
+  fi
+}

@@ -1,0 +1,7 @@
+#!/bin/sh
+
+. lib/funcs
+init "$@"
+
+updateremote "${sabotage_remote}" src/"${project}"/sabotage.git git
+updateremote "${musl_cross_remote}" src/"${project}"/musl-cross.git git

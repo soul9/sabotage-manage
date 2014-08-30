@@ -1,0 +1,9 @@
+sabotage_remote="/home/j/repos/sabotage.git"
+sabotage_branch="master"
+host_arch="x86_64"
+extra_host_pkgs="syslinux6 btrfs-progs lxc partx world"
+
+target_arch="armv7hf"
+extra_target_pkgs="btrfs-progs lxc partx world syslinux6" 
+musl_cross_remote='git://github.com/rofl0r/musl-cross.git'
+musl_cross_branch="kernelheaders_3126-5"

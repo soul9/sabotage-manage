@@ -1,0 +1,8 @@
+#!/bin/sh
+
+. lib/funcs
+init "$@"
+
+bin/buildhost "$@"
+
+build_target

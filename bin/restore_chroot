@@ -1,0 +1,10 @@
+#!/bin/sh
+
+. lib/releng_funcs
+
+init "$@"
+r="${2:-}"
+[ -z "${r}" ] && fail "Usage: $0 project [target|host]"
+
+restore_chroot "${r}"
+

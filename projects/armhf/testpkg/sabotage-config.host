@@ -1,0 +1,31 @@
+export SABOTAGE_BUILDDIR=""
+export A=x86_64
+
+#export A=i386
+#export A=arm
+#export A=mips
+#export A=powerpc
+
+export CC=gcc
+export HOSTCC=gcc
+
+export MAKE_THREADS=9
+
+#export SUPER=1
+
+export ARM_FLOAT_MODE=softfp
+export ARM_FPU=vfp
+
+# needed to inherit $PWD from toplevel buildscript
+[ -z "$H" ] && H="$PWD"
+
+export K="$H"/KEEP
+export C="$H"/tarballs
+export R="$SABOTAGE_BUILDDIR"
+export S="$R"/src
+export LOGPATH="$S"/logs
+
+export BUTCH_BUILD_TEMPLATE="$K"/butch_template_configure_cached.txt
+export BUTCH_DOWNLOAD_TEMPLATE="$K"/butch_download_template.txt
+
+export STAGE=0

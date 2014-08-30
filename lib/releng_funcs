@@ -1,0 +1,117 @@
+#!/bin/sh
+
+. lib/funcs
+
+save_chroot() {
+  local r="${1:-}"
+  [ -z "${r}" ] && return 1
+  mkdir -p "${manage_root}"/save
+  (cd build/"${project}"/"${r}"/r && tar cp .) |xz --stdout > save/"${project}"-"${r}".tar.xz
+}
+
+remove_chroot() {
+  local r="${1:-}"
+  [ -z "${r}" ] && return 1
+  mount |grep -q build/"${project}"/"${r}" && return 1
+  rm -fr build/"${project}"/"${r}"
+}
+
+restore_chroot() {
+  local r="${1:-}"
+  [ -z "${r}" ] && return 1
+  [ -f save/"${project}"-"${r}".tar.xz ] || return 1
+  remove_chroot "${r}" || return 1
+  (
+    mkdir -p build/"${project}"/"${r}"/r && \
+      cd build/"${project}"/"${r}"/r && \
+      tar xfp "${manage_root}"/save/"${project}"-"${r}".tar.xz
+  )
+}
+
+enter_chroot() {
+  local r="${1:-}"
+  [ -z "${r}" ] && return 1
+  local ret=0
+  if [ "${r}" = "target" ]; then
+    mount_cross
+  fi
+  cd build/"${project}"/src/sabotage/host/
+  ./enter-chroot || ret=1
+  cd "${manage_root}"
+  if [ "${r}" = "target" ]; then
+    for i in $(seq 5); do
+      if unmount_cross; then
+        break
+      else
+        echo "Can not umount, retrying"
+      fi
+      sleep 1
+    done
+  fi
+  return $ret
+}
+
+modify_chroot() {
+  local r="${1:-}"
+  [ -z "${r}" ] && return 1
+  restore_chroot "${r}"
+  enter_chroot "$r"
+  echo "Save? (^C to abort, you have 5s, this will clobber previous)"
+  for i in $(seq 5); do
+    sleep 1
+    echo -n '.'
+  done
+  echo
+  save_chroot "$r"
+}
+
+prepare_chroots() {
+  updateremote "${sabotage_remote}" \
+    src/"${project}"/sabotage.git git
+  updateremote "${musl_cross_remote}" \
+    src/"${project}"/musl-cross.git git
+  clone_checkout_local src/"${project}"/sabotage.git \
+    build/"${project}"/src/sabotage/host "${sabotage_branch}" git
+  clone_checkout_local src/"${project}"/sabotage.git \
+    build/"${project}"/src/sabotage/target "${sabotage_branch}" git
+  clone_checkout_local src/"${project}"/musl-cross.git \
+    build/"${project}"/host/r/opt/musl-cross "${musl_cross_branch}" git
+
+  build_for host stage1
+  build_cross stage1
+  save_chroot "${project}" host
+  save_chroot "${project}" target
+  remove_chroot "${project}" host
+  remove_chroot "${project}" target
+}
+
+test_pkg() {
+  local pkg="${1:-}"
+  [ -z "${pkg}" ] && return 1
+  restore_chroot host
+  restore_chroot target
+  build_for host "${pkg}"
+  build_cross "${pkg}"
+  remove_chroot host
+  remove_chroot target
+}
+
+list_pkgs() {
+  local p="${1:0}"
+  (cd build/"${project}"/host/src/pkg; echo *)
+}
+
+test_pkgs() {
+  prepare_chroots "${project}"
+  for pkg in $(list_pkgs "${project}"); do
+    test_pkg "${pkg}"
+  done
+}
+
+#Autotag releases
+#report download errors
+#check each package one by one testing against stage1
+#to verify dependency spec
+#redownload_sources() {}
+#test_packages_world_onebyone() {}
+#if redownload_sources && test_packages_world_onebyone then tag release

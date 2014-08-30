@@ -1,0 +1,5 @@
+#!/bin/sh
+
+. lib/maint_funcs
+. lib/vcs_funcs
+. lib/build_funcs

@@ -1,0 +1,86 @@
+#!/bin/sh
+
+#This updates the local copy of the repository
+updateremote() {
+  local remote="${1:-}"
+  local dst="${2:-}"
+  local vcs="${3:-}"
+  local cwd="$(pwd)"
+  [ -z "${dst}" -o -z "${remote}" ] && return 1
+  if [ -d "${dst}" ]; then
+    cd "${dst}"
+    case "${vcs}" in
+      "git")
+        git fetch
+        ;;
+      "hg")
+        hg pull -u null
+        ;;
+      *)
+        fail "No such vcs: $vcs"
+        ;;
+    esac
+  else
+    mkdir -p "$(dirname ${dst})"
+    case "${vcs}" in
+      "git")
+        git clone --mirror "${remote}" "${dst}"
+        (
+          cd "${dst}"
+          git config remote.origin.fetch +refs/heads/*:refs/heads/*
+        )
+        ;;
+      "hg")
+        hg clone -u null "${remote}" "${dst}"
+        ;;
+      *)
+        fail "No such vcs: $vcs"
+        ;;
+    esac
+  fi
+  cd "${manage_root}"
+}
+
+# Ideally this would just checkout a copy
+# as is, just clone it yet an other time
+clone_checkout_local() {
+  local repo="${1:-}"
+  local target="${2:-}"
+  local branch="${3:-}"
+  local vcs="${4:-}"
+  [ -z "${repo}" -o -z "${target}" -o -z "${vcs}" -o -z "$branch" ] && return 1
+  if [ -d "${target}"/."${vcs}" ]; then
+    cd "${target}"
+    case "${vcs}" in
+      "git")
+        git fetch
+        git checkout "${branch}" || git reset --hard origin/"${branch}"
+        ;;
+      "hg")
+        hg pull -u -r "$branch"
+        ;;
+      *)
+        fail "No such vcs: $vcs"
+        ;;
+    esac
+  else
+    mkdir -p "$(dirname ${target})"
+    rm -rf "${target}"
+    case "${vcs}" in
+      "git")
+        git clone "${repo}" "${target}"
+        cd "${target}"
+        git checkout "${branch}" || git reset --hard origin/"${branch}"
+        ;;
+      "hg")
+        hg clone "${repo}" "${target}"
+        cd "${target}"
+        hg update -r "${branch}"
+        ;;
+      *)
+        fail "No such vcs: $vcs"
+        ;;
+    esac
+  fi
+  cd "${manage_root}"
+}

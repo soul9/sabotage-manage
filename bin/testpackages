@@ -1,0 +1,6 @@
+#!/bin/sh
+
+. lib/releng_funcs
+init "$@"
+
+test_pkgs

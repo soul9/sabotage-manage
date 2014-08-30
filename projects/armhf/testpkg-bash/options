@@ -1,0 +1,10 @@
+#sabotage_remote="/home/j/repos/sabotage.git"
+sabotage_remote="git://github.com/sabotage-linux/sabotage.git"
+sabotage_branch="master"
+host_arch="x86_64"
+extra_host_pkgs="bash"
+
+target_arch="armv7hf"
+extra_target_pkgs="" 
+musl_cross_remote='git://github.com/rofl0r/musl-cross.git'
+musl_cross_branch="kernelheaders_3126-5"

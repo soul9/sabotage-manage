@@ -1,0 +1,10 @@
+#!/bin/sh
+
+. lib/funcs
+init "$@"
+
+bin/initremote "$@"
+
+clone_checkout_local src/"${project}"/sabotage.git build/"${project}"/src/sabotage/host "${sabotage_branch}" git
+clone_checkout_local src/"${project}"/sabotage.git build/"${project}"/src/sabotage/target "${sabotage_branch}" git
+clone_checkout_local src/"${project}"/musl-cross.git build/"${project}"/host/r/opt/musl-cross "${musl_cross_branch}" git

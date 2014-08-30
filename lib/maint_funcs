@@ -1,0 +1,32 @@
+#!/bin/sh
+
+fail() {
+  echo "$@" >&2
+  exit 1
+}
+
+set_options() {
+  echo "set -o pipefail"
+  echo "set -o errexit"
+  echo "set -o nounset"
+}
+
+findproject() {
+  local p="${1:-}"
+  [ -z "${p}" ] && return 1
+  find projects/ -name "${p}" -type d
+}
+
+init() {
+  eval "$(set_options)"
+  if [ "$(id -u)" != "0" ]; then
+    fail "Need root"
+  fi
+  export manage_root="$(pwd)"
+  export project="${1:-}"
+  if [ -z "${project}" ]; then
+    fail "usage: ${0} project_name"
+  fi
+  export project_dir=$(findproject "${project}" || fail "No such project: ${project}")
+  . "${project_dir}"/options
+}

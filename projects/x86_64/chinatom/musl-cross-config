@@ -1,0 +1,59 @@
+# ARCH will be auto-detected as the host if not specified
+#ARCH=i486
+#ARCH=x86_64
+#ARCH=x64
+#ARCH=powerpc
+#ARCH=arm
+#ARCH=microblaze
+#ARCH=mips
+#ARCH=mipsel
+#ARCH=armv7hf
+#ARCH=armv7
+#ARCH=sh
+
+CC_BASE_PREFIX=/opt/cross
+MAKEFLAGS=-j8
+#ARCH=sh
+
+if [ "$ARCH" = armv7hf ] ; then
+	# arm hardfloat v7
+	TRIPLE=arm-linux-musleabihf
+	GCC_BOOTSTRAP_CONFFLAGS="--with-arch=armv7-a --with-float=hard --with-fpu=vfpv3-d16"
+	GCC_CONFFLAGS="--with-arch=armv7-a --with-float=hard --with-fpu=vfpv3-d16"
+	ARCH=arm
+
+elif [ "$ARCH" = armv7 ] ; then
+	#arm softfp
+	TRIPLE=arm-linux-musleabi
+	GCC_BOOTSTRAP_CONFFLAGS="--with-arch=armv7-a --with-float=softfp"
+	GCC_CONFFLAGS="--with-arch=armv7-a --with-float=softfp"
+	ARCH=arm
+
+elif [ "$ARCH" = sh ] ; then
+	TRIPLE=sh4-linux-musl
+elif [ "$ARCH" = sheb ] ; then
+	TRIPLE=sh4eb-linux-musl
+elif [ "$ARCH" = "x86_64" ] ; then
+	TRIPLE=x86_64-linux-musl
+elif [ "$ARCH" = "i486" ] ; then
+	TRIPLE=i486-linux-musl
+elif [ "$ARCH" = "x32" ] ; then
+	TRIPLE=x86_64-x32-linux-musl
+fi
+
+GCC_STAGE1_NOOPT=1
+GCC_VERSION=4.8.3
+CC_BASE_PREFIX=/opt/musl-cross/prefix/$TRIPLE-$GCC_VERSION
+MUSL_CONFFLAGS=--enable-optimize=size
+WITH_SYSROOT=0
+#ARCH=x86_64-x32
+#ARCH=x32
+#TRIPLE=x86_64-x32-linux-musl
+
+#MUSL_GIT=yes
+#MUSL_GIT_REPO=/media/3T/git-mirror/musl
+#MUSL_GIT_VERSION=HEAD
+#MUSL_VERSION=$MUSL_GIT_VERSION
+
+#LINUX_HEADERS_VERSION=3.12.6
+
