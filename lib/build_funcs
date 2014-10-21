@@ -23,7 +23,7 @@ build_for() {
   esac
   cp "$(findproject ${project})"/sabotage-config."${r}" build/"${project}"/src/sabotage/"${r}"/config
 
-  cd build/"${project}"/src/sabotage/"${r}"/ 
+  cd build/"${project}"/src/sabotage/"${r}"/
   sed -i "s,export SABOTAGE_BUILDDIR\=.*,export SABOTAGE_BUILDDIR='${manage_root}/build/${project}/$r/r'," config
   mount --bind "${manage_root}"/tarballs "${manage_root}"/build/"${project}"/src/sabotage/$r/tarballs
   if [ ! -d "${manage_root}/build/${project}/$r/r/etc" ]; then
